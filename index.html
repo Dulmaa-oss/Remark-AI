@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Issue Log — Emart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --surface-2: #eef1f6;
+      --text: #1a2332;
+      --text-muted: #5c6b7f;
+      --border: #e2e8f0;
+      --border-hover: #c8d4e3;
+      --accent: #2563eb;
+      --shadow: 0 1px 3px rgba(26, 35, 50, 0.06), 0 4px 12px rgba(26, 35, 50, 0.04);
+      --shadow-lg: 0 8px 30px rgba(26, 35, 50, 0.1);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --completed: #185fa5;
+      --completed-bg: #e8f2fc;
+      --closed: #276b38;
+      --closed-bg: #e6f4ea;
+      --network: #9b2c2c;
+      --network-bg: #fdeaea;
+      --next: #854f0b;
+      --next-bg: #fef6e4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      overflow: hidden; clip: rect(0,0,0,0);
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .header-icon {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .header-icon svg { width: 24px; height: 24px; color: #fff; }
+
+    .title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Metrics */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric {
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      text-align: center;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .metric:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .metric-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .metric-value.c-completed { color: var(--completed); }
+    .metric-value.c-closed { color: var(--closed); }
+    .metric-value.c-next { color: var(--next); }
+    .metric-value.c-network { color: var(--network); }
+
+    /* Filters */
+    .filter-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .filter-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.45rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--border-hover);
+      color: var(--text);
+    }
+
+    .filter-btn.active {
+      background: var(--text);
+      color: #fff;
+      border-color: var(--text);
+    }
+
+    /* Cards */
+    .cards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.15rem;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      box-shadow: var(--shadow);
+    }
+
+    .card:hover {
+      border-color: var(--border-hover);
+    }
+
+    .card.expanded {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-num {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .card-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .b-completed { background: var(--completed-bg); color: var(--completed); }
+    .b-closed { background: var(--closed-bg); color: var(--closed); }
+    .b-network { background: var(--network-bg); color: var(--network); }
+    .b-next { background: var(--next-bg); color: var(--next); }
+
+    .card-sub {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 0.35rem;
+    }
+
+    .card-en {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.45;
+      margin-bottom: 0.25rem;
+    }
+
+    .card-mn {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .chevron {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+
+    .card.expanded .chevron { transform: rotate(180deg); }
+
+    .expand-body {
+      display: none;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card.expanded .expand-body { display: block; }
+
+    .expand-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .field label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .field p {
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .response-box {
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1rem;
+      font-size: 0.875rem;
+      line-height: 1.65;
+      color: var(--text);
+      margin-top: 0.25rem;
+      border-left: 3px solid var(--accent);
+    }
+
+    .card-footer {
+      margin-top: 0.75rem;
+      padding-top: 0.65rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .card-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .card-meta svg { width: 14px; height: 14px; opacity: 0.6; }
+
+    .count-hint {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    @media (max-width: 640px) {
+      .page { padding: 1.25rem 1rem 2rem; }
+      .title { font-size: 1.4rem; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .expand-grid { grid-template-columns: 1fr; }
+      .filter-btn { font-size: 0.75rem; padding: 0.4rem 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<h1 class="sr-only">System Issue Log — 20 асуудлын карт харагдац</h1>
+
+<div class="page">
+  <header class="header">
+    <div class="header-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+    </div>
+    <h2 class="title">System Issue Log</h2>
+    <p class="subtitle">Emart · 2026-04 · 20 асуудал · Карт дээр дарж дэлгэрэнгүй харна уу</p>
+  </header>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Completed</div>
+      <div class="metric-value c-completed">7</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Closed</div>
+      <div class="metric-value c-closed">8</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Next Release</div>
+      <div class="metric-value c-next">4</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Сүлжээний</div>
+      <div class="metric-value c-network">4</div>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <button class="filter-btn active" data-filter="all">Бүгд (20)</button>
+    <button class="filter-btn" data-filter="completed">Completed</button>
+    <button class="filter-btn" data-filter="closed">Closed</button>
+    <button class="filter-btn" data-filter="network">Сүлжээний</button>
+    <button class="filter-btn" data-filter="next">Next Release</button>
+  </div>
+
+  <p class="count-hint" id="count-hint"></p>
+  <div class="cards-grid" id="cards-grid"></div>
+</div>
+
+<script>
+const issues = [
+  {id:2,module:'Captures',sub:'Pedestrian',en:'Filter is not working — shows "No data"',mn:'Шүүлтүүр ажиллахгүй байна — "No data" гэж харагдаж байна',reporter:'Altangerel',date:'2026-04-17',response:'To save network usage, this application aggregates counting data every 1 min interval rather than capturing each individual image, which requires large bandwidth.',status:'Closed',timeline:'—',type:'closed'},
+  {id:1,module:'Dashboard',sub:'Heat map / Daily / POS Daily',en:'All displayed graph data should show sum total amounts',mn:'Бүх харуулж байгаа график датанд нийлбэр (sum total) дүнг харуулах',reporter:'Отгончимэг',date:'2026-04-15',response:'We will update the dashboard by adding Total amount.',status:'Completed',timeline:'8-р сарын 8',type:'completed'},
+  {id:7,module:'Dashboard',sub:'Default Date',en:'Dashboard default is set to March 28 — should be set to current time',mn:'Дашбоардын default утга March 28 гэж тохируулагдсан — одоогийн цаг болгох хэрэгтэй',reporter:'Sukhbat',date:'2026-04-20',response:'We will update the dashboard — set default as "Today".',status:'Completed',timeline:'8-р сарын 8',type:'completed'},
+  {id:16,module:'Dashboard',sub:'Daily Reports',en:'Titles must be added to all diagrams',mn:'Диаграммуудад гарчиг (title) нэмэх шаардлагатай',reporter:'Мөнх-Оргил, Сүхбат',date:'2026-04-21',response:'We will update the dashboard — add the titles to all diagrams.',status:'Completed',timeline:'8-р сарын 8',type:'completed'},
+  {id:11,module:'Data',sub:'Customer Count',en:'Total store visitor count vs POS camera count only matches 40–60%',mn:'Дэлгүүрт орсон нийт хүний тоо болон ПОС камерын тоог харьцуулахад 40–60% таарч байна',reporter:'Лхам-Янжин',date:'2026-04-21',response:'Network issue has been raised in the previous meeting. Line crossing function requires no missing frames during tracking (h.264, 12fps, 1080p). Improvement noted from monitoring — likely due to Emart Team network upgrade.',status:'Pending',timeline:'Сүлжээний багтай хэлэлцэх',type:'network'},
+  {id:12,module:'End Reports',sub:'Customer Count',en:'End report should include brief summary: lowest/highest footfall, avg per camera zone',mn:'End report хэсэгт товч дүгнэлт бичих шаардлагатай — аль хэсэгт бага/их хүн очиж байгаа',reporter:'Лхам-Янжин',date:'2026-04-21',response:'We will update the dashboard — add the summary.',status:'Completed',timeline:'8-р сарын 8',type:'completed'},
+  {id:14,module:'General',sub:'High Temp. Threshold',en:'"High Temperature Threshold" setting is unclear — what temperature does it refer to?',mn:'"High Temperature Threshold" тохиргоо ямар учиртай тодорхойгүй',reporter:'Мөнх-Оргил, Сүхбат',date:'2026-04-21',response:'This setting relates to high-temperature individuals, not relevant to this project. It will be hidden in a future release. At the moment, you can ignore it.',status:'Closed',timeline:'Ирээдүйн хувилбар',type:'closed'},
+  {id:13,module:'My Profile',sub:'Personal Info',en:'Forename, Surname, Email, and Mobile Number cannot be edited',mn:'Нэр, овог, имэйл, утасны дугаарыг өөрчлөх боломжгүй байна',reporter:'Мөнх-Оргил, Сүхбат',date:'2026-04-21',response:'We will fix and improve this feature in the next release. At the moment, submit a ticket or email/WhatsApp us — we can update for you. Upgrade expected by Wednesday 27th May.',status:'Next release',timeline:'v4.2 — 30 хоногт',type:'next'},
+  {id:3,module:'System',sub:'Alert Notifications',en:'Need ability to configure notifications to specific users via email or SMS',mn:'Тодорхой notification-г тодорхой хэрэглэгч рүү имэйл/SMS-ээр илгээх тохиргоо хийх',reporter:'Altangerel',date:'2026-04-15',response:'Email notification has been set up. For SMS, a third-party paid service can be arranged — may add extra cost. Let us know if SMS is needed.',status:'Completed',timeline:'8-р сарын 8',type:'completed'},
+  {id:8,module:'System',sub:'User Management',en:'User management module is missing / inaccessible',mn:'Хэрэглэгч удирдлагын модуль байхгүй / нэвтрэх боломжгүй байна',reporter:'Altangerel',date:'2026-04-15',response:'We will fix and improve this feature to enable more flexibility to add new users in the next release. At the moment, submit a ticket or email/WhatsApp us.',status:'Next release',timeline:'v4.2 — 30 хоногт',type:'next'},
+  {id:4,module:'System',sub:'Camera Connections',en:'POS-16 camera is not connected to the system — how to verify?',mn:'POS-16 камер системтэй холбогдоогүй байна. Холбогдсон эсэхийг хэрхэн шалгах вэ?',reporter:'Sukhbat',date:'2026-04-16',response:'Resolved. Let us know if there is any further action needed from us.',status:'Closed',timeline:'Шийдэгдсэн',type:'closed'},
+  {id:5,module:'System',sub:'Live Feed',en:'Entering live feed and dropping a camera does not start the stream',mn:'Live feed рүү орж камер оруулахад стрим эхлэхгүй байна. Туулай icon дарахад алдаа гарч байна.',reporter:'Sukhbat',date:'2026-04-20',response:'Network issue raised in previous meeting. New feature update introduces lower resolution streaming (720p/640p) to reduce bandwidth — deployed live.',status:'Pending',timeline:'Сүлжээний багтай хэлэлцэх',type:'network'},
+  {id:6,module:'System',sub:'Date Range',en:'Is MMM dd yyyy HH:mm:ss.SSSS format necessary?',mn:'MMM dd yyyy HH:mm:ss.SSSS форматаар заавал байх шаардлагатай юу?',reporter:'Sukhbat',date:'2026-04-20',response:'Some users prefer seconds-level precision. We can allow more flexibility in a future release.',status:'Next release',timeline:'v4.3 — ирээдүй',type:'next'},
+  {id:15,module:'System',sub:'Bug – Gateway Error',en:'Gateway error occurs consistently during system configuration',mn:'Систем тохиргоо хийх явцад байнга gateway error гарч байна',reporter:'Мөнх-Оргил, Сүхбат',date:'2026-04-21',response:'Closed for now — not observed recently. If it occurs again, record the screen. Refreshing the webpage should resolve it.',status:'Closed',timeline:'v4.2',type:'closed'},
+  {id:17,module:'System',sub:'Device Setup',en:'Always returns "Connection Failed" error — edit/draw actions are impossible',mn:'Үргэлж "Connection Failed" алдаа гарч, edit/draw хийх боломжгүй болж байна',reporter:'Мөнх-Оргил, Сүхбат',date:'2026-04-21',response:'Network issue has been raised in the previous meeting and project channel.',status:'Pending',timeline:'Сүлжээний багтай хэлэлцэх',type:'network'},
+  {id:18,module:'System',sub:'Device Settings',en:'Always returns "Connection Failed" error — edit/draw actions are impossible',mn:'Үргэлж "Connection Failed" алдаа гарч, edit/draw хийх боломжгүй болж байна',reporter:'Мөнх-Оргил, Сүхбат',date:'2026-04-21',response:'Network issue has been raised in the previous meeting and project channel.',status:'Pending',timeline:'Сүлжээний багтай хэлэлцэх',type:'network'},
+  {id:19,module:'System',sub:'Task Schedule',en:'Why is the Emart flow schedule Edit Rule configured to start at 04:00?',mn:'Emart flow schedule-ийн Edit rule дээр яагаад 04:00 цагаас эхлүүлсэн байгаа бэ?',reporter:'Мөнх-Оргил, Сүхбат',date:'2026-04-21',response:'Flow counting aggregates daily totals and resets to 0 before business hours. Any time can be set (0am or 5am). Let us know your preferred reset time.',status:'Closed',timeline:'8-р сарын 8',type:'closed'},
+  {id:20,module:'System',sub:'Alert Notifications',en:'Adding email/SMS receivers shows "Access Not Permitted"',mn:'Email/SMS хүлээн авагч нэмэхэд "Access Not Permitted" алдаа гарч байна',reporter:'Мөнх-Оргил, Сүхбат',date:'2026-04-21',response:'1. Email is ready to set up now.\n2. SMS requires a third-party paid service — extra cost may apply.\n3. More flexibility will be added in v4.2.',status:'Closed',timeline:'Email: 8-р сарын 8 / SMS: v4.2',type:'closed'},
+  {id:9,module:'UX/UI',sub:'Navigation',en:'Previously visited menus should be remembered — too many clicks to navigate',mn:'Нээж харсан цэсийг дарааллаар хадгалж, хэт олон click шаардагдаж байна',reporter:'Отгончимэг',date:'2026-04-16',response:'UX/UI improvement: We can schedule a call to confirm the design, then develop and improve this.',status:'Next release',timeline:'v4.3 — ирээдүй',type:'next'},
+  {id:10,module:'UX/UI',sub:'Date Picker',en:'Date picker is difficult when filtering by date — scroll-based picker would be easier',mn:'Хугацаагаар шүүж харахад өдөр сонгоход хүндрэлтэй байна',reporter:'Отгончимэг',date:'2026-04-16',response:'UX/UI improvement: We can schedule a call to confirm the design, then develop and improve this.',status:'Next release',timeline:'v4.3 — ирээдүй',type:'next'},
+];
+
+const badgeCls = { completed:'b-completed', closed:'b-closed', network:'b-network', next:'b-next' };
+const badgeLbl = { completed: s => s, closed: s => s, network: () => 'Pending', next: s => s };
+
+let expandedId = null;
+let currentFilter = 'all';
+
+function badge(type, status) {
+  return `<span class="badge ${badgeCls[type]}">${badgeLbl[type](status)}</span>`;
+}
+
+function getFilteredList() {
+  if (currentFilter === 'all') return issues;
+  return issues.filter(i => i.type === currentFilter);
+}
+
+function toggleCard(id, e) {
+  if (e) e.stopPropagation();
+  expandedId = expandedId === id ? null : id;
+  renderCards();
+}
+
+function renderCards() {
+  const list = getFilteredList();
+  const grid = document.getElementById('cards-grid');
+  const hint = document.getElementById('count-hint');
+
+  hint.textContent = list.length
+    ? `${list.length} асуудал харагдаж байна`
+    : '';
+
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty-state">Илэрц олдсонгүй. Өөр шүүлтүүр сонгоно уу.</div>';
+    return;
+  }
+
+  const chevron = `<svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,6 8,10 12,6"/></svg>`;
+  const userIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  const clockIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+
+  grid.innerHTML = list.map(iss => {
+    const exp = expandedId === iss.id;
+    return `<article class="card${exp ? ' expanded' : ''}" onclick="toggleCard(${iss.id}, event)" role="button" tabindex="0" aria-expanded="${exp}">
+      <div class="card-top">
+        <span class="card-num">#${iss.id} · ${iss.module}</span>
+        <div class="card-right">${badge(iss.type, iss.status)}${chevron}</div>
+      </div>
+      <div class="card-sub">${iss.sub}</div>
+      <div class="card-en">${iss.en}</div>
+      <div class="card-mn">${iss.mn}</div>
+      <div class="expand-body" onclick="event.stopPropagation()">
+        <div class="expand-grid">
+          <div class="field"><label>Ажилтан</label><p>${iss.reporter}</p></div>
+          <div class="field"><label>Огноо</label><p>${iss.date}</p></div>
+        </div>
+        <div class="field"><label>Хариу / Response</label><div class="response-box">${iss.response.replace(/\n/g, '<br>')}</div></div>
+        <div class="field" style="margin-top:0.85rem"><label>Хугацаа / Timeline</label><p>${iss.timeline}</p></div>
+      </div>
+      <div class="card-footer">
+        <span class="card-meta">${userIcon}${iss.reporter}</span>
+        <span class="card-meta">${clockIcon}${iss.timeline}</span>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    expandedId = null;
+    renderCards();
+  });
+});
+
+renderCards();
+</script>
+</body>
+</html>
